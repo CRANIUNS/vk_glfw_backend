@@ -277,7 +277,20 @@ void VkGlfwBackend::DestroyWindowContext(VkGlfwWindowContext* ctx)
 {
     if (!ctx)
         return;
+
+    // Guarda a surface antes: ImGui_ImplVulkanH_DestroyWindow zera a struct
+    // Window internamente.
+    VkSurfaceKHR surface = ctx->Window.Surface;
+
     ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, &ctx->Window, g_Allocator);
+
+    // Desde a versão do ImGui de 2025-09-26, ImGui_ImplVulkanH_DestroyWindow
+    // NÃO destrói mais a surface (ela é criada pelo chamador de
+    // CreateWindowContext, então a responsabilidade de fechar o ciclo de
+    // vida dela é nossa). Sem esta linha, cada janela fechada vazaria a
+    // VkSurfaceKHR correspondente.
+    vkDestroySurfaceKHR(g_Instance, surface, g_Allocator);
+
     delete ctx;
 }
 
