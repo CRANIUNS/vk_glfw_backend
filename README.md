@@ -160,16 +160,3 @@ Cada janela usa sua própria instância de `ImGui_ImplVulkan` (contextos ImGui s
 | `GetInstance()`, `GetDevice()`, `GetPhysicalDevice()`, `GetQueue()`, `GetQueueFamily()`, `GetDescriptorPool()`, `GetAllocator()`, `GetMinImageCount()` | global | Acessores compartilhados por todas as janelas. |
 | `GetRenderPass(ctx)` | por janela | Render pass daquela swapchain específica, para `ImGui_ImplVulkan_InitInfo::PipelineInfoMain.RenderPass` (ou `::RenderPass` direto, em versões do ImGui anteriores a 2025-09-26). |
 
-## Correções feitas em relação ao código original
-
-- `g_instance` (minúsculo, usado por engano ao criar o debug callback) corrigido para `g_Instance`.
-- `IsExtensionAvailable` / `isExtensionAvailable` — capitalização inconsistente unificada.
-- **Suporte a múltiplas janelas**: o estado de swapchain (`ImGui_ImplVulkanH_Window`, flag de rebuild) saiu de globais únicas (`g_MainWindowData`, `g_SwapChainRebuild`) e virou um `VkGlfwWindowContext` por janela, alocado por `CreateWindowContext`. Instância/device/fila continuam globais, como é normal em Vulkan.
-- **Migração de `VK_EXT_debug_report` para `VK_EXT_debug_utils`**: a extensão de debug antiga está deprecated. A nova cobre validação, performance e mensagens gerais num único callback, com mais contexto por mensagem, e é encadeada via `pNext` na criação da instância para também capturar problemas em `vkCreateInstance`/`vkDestroyInstance`.
-- `CleanupVulkan` só tenta destruir o messenger de debug se ele foi de fato criado (evita destruição incondicional de um handle nulo quando a validação está desligada).
-- Debug/validação virou opção de runtime (`enable_validation_layers`) em vez de `#ifdef _DEBUG` fixo em tempo de compilação.
-- **Vazamento de `VkSurfaceKHR` corrigido**: desde a versão do ImGui de 2025-09-26, `ImGui_ImplVulkanH_DestroyWindow` parou de destruir a surface internamente (ela é criada pelo chamador, então virou responsabilidade dele). `DestroyWindowContext` agora chama `vkDestroySurfaceKHR` explicitamente depois de `ImGui_ImplVulkanH_DestroyWindow` — a surface passada para `CreateWindowContext` passa a ser propriedade da lib a partir daquele ponto; não a destrua de novo por fora, ou vira double free.
-
-## Limitação que permanece (por design)
-
-- A lib não gerencia carregamento de fontes/texturas do ImGui — isso continua por conta do app, via `GetDevice()`/`GetQueue()`/`GetDescriptorPool()`. Isso não foi tratado como bug: entra em conflito direto com o objetivo de manter a lib pequena e sem opinião sobre como cada projeto organiza upload de assets, e o Dear ImGui já expõe uma API própria para isso (`ImGui_ImplVulkan_CreateFontsTexture`, etc.) que a lib não precisa reembrulhar.
