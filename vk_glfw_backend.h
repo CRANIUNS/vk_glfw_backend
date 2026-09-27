@@ -67,8 +67,11 @@ namespace VkGlfwBackend
     // apresentar nessa surface.
     VkGlfwWindowContext* CreateWindowContext(VkSurfaceKHR surface, int width, int height);
 
-    // Libera a swapchain/render pass/framebuffers dessa janela. Chamar
-    // para cada contexto antes de CleanupVulkan().
+    // Libera a swapchain/render pass/framebuffers dessa janela E a
+    // VkSurfaceKHR passada para CreateWindowContext (a partir do ImGui
+    // 2025-09-26, o helper de destroy não faz mais isso sozinho). Chamar
+    // para cada contexto antes de CleanupVulkan(); não chamar
+    // vkDestroySurfaceKHR de novo por fora, ou dará double free.
     void DestroyWindowContext(VkGlfwWindowContext* ctx);
 
     // Recria a swapchain de uma janela específica num novo tamanho.
